@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Interaktive Simulation für PV, Wärmepumpe, Speicher, Wallbox und Mieterstrom." />
+  <title>PV + Wärmepumpe – Simulation & Informationsstrom</title>
+  <link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="dark.css" />
+</head>
+<body>
+<div class="ambient"></div>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow"><span class="brand-mark">E</span> ENERGY / OPTIMIZER</div>
+      <h1>Deine Energie.<br><span>Deine Perspektive.</span></h1>
+      <p>PV, Wärmepumpe und Eigenverbrauch im Zusammenspiel. Vergleiche Szenarien und entdecke, was deine Investition bewirkt.</p>
+    </div>
+    <div class="top-actions">
+      <button id="resetBtn" class="button secondary">Standardwerte</button>
+      <button id="shareBtn" class="button secondary">JSON kopieren</button><button id="downloadBtn" class="button">JSON exportieren ↓</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Bereiche">
+    <button class="tab active" data-tab="overview">Übersicht</button>
+    <button class="tab" data-tab="simulation">Simulation</button>
+    <button class="tab" data-tab="strategy">Verbrauchsstrategie</button>
+    <button class="tab" data-tab="tax">Steuern & Förderung</button>
+    <button class="tab" data-tab="assumptions">Annahmen</button>
+  </nav>
+
+  <main>
+    <section id="overview" class="panel active"><div class="section-intro"><div><span class="eyebrow">DEIN ENERGIEPROJEKT</span><h2>Der Blick aufs Ganze</h2></div><span class="live-label"><i></i> Lokal berechnet</span></div>
+      <div class="hero-grid">
+        <article class="hero-card">
+          <span class="label">Gesamtinvestition</span>
+          <strong id="kpiInvestment">–</strong>
+          <small>PV + Wärmepumpe vor Zuschüssen</small>
+        </article>
+        <article class="hero-card">
+          <span class="label">Nettoinvestition</span>
+          <strong id="kpiNetInvestment">–</strong>
+          <small>nach modellierten Zuschüssen</small>
+        </article>
+        <article class="hero-card accent">
+          <span class="label">Amortisation</span>
+          <strong id="kpiPayback">–</strong>
+          <small>inkl. Einsparungen, Einnahmen und Steuern</small>
+        </article>
+        <article class="hero-card">
+          <span class="label">10-Jahres-Saldo</span>
+          <strong id="kpiTenYear">–</strong>
+          <small>kumuliert nach Investition</small>
+        </article>
+      </div>
+
+      <div class="two-col">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>Kumulierte Wirtschaftlichkeit</h2>
+              <p>Jährlicher Gesamtnutzen gegen die anfängliche Investition.</p>
+            </div>
+            <span id="scenarioPill" class="pill">Basis</span>
+          </div>
+          <div class="chart-scroll"><svg id="cashflowChart" class="chart" viewBox="0 0 820 330" role="img" aria-label="Kumulierte Wirtschaftlichkeit"></svg></div>
+        </article>
+
+        <article class="card">
+          <h2>Jahr 1 – Nutzenblöcke</h2>
+          <div id="benefitBars" class="bar-list"></div>
+          <div class="callout">
+            <strong>Wichtig:</strong> Die 0-%-Umsatzsteuer auf die PV ist im Kaufpreis bereits enthalten und wird nicht noch einmal als zusätzlicher Cashflow gezählt.
+          </div>
+        </article>
+      </div>
+
+      <div class="two-col"><article class="card"><div class="card-head"><div><span class="eyebrow">PV-NUTZUNG</span><h2>Wohin fließt deine Energie?</h2><p>Aufteilung des PV-Ertrags im ersten Jahr.</p></div></div><div class="donut-layout"><svg id="energyDonut" viewBox="0 0 240 240" role="img" aria-label="PV-Nutzung im ersten Jahr"></svg><div id="energyLegend" class="chart-legend"></div></div></article><article class="card"><span class="eyebrow">SZENARIENVERGLEICH</span><h2>Wie verändert sich das Ergebnis?</h2><p>Kumulierter Saldo nach zehn Jahren. Deine Projektkosten und Verbrauchswerte gelten für alle Szenarien.</p><div id="scenarioComparison" class="scenario-comparison"></div></article></div><article class="card">
+        <h2>Energie im Jahr 1</h2>
+        <div class="energy-summary">
+          <div><span>PV-Ertrag</span><b id="energyPv">–</b></div>
+          <div><span>Eigene Nutzung</span><b id="energyOwn">–</b></div>
+          <div><span>Mietwohnung</span><b id="energyTenant">–</b></div>
+          <div><span>Einspeisung</span><b id="energyFeed">–</b></div>
+          <div><span>Netzbezug eigen</span><b id="energyGrid">–</b></div>
+        </div>
+      </article>
+    </section>
+
+    <section id="simulation" class="panel">
+      <div class="layout-sidebar">
+        <aside class="card controls sticky">
+          <div class="card-head">
+            <div>
+              <h2>Parameter</h2>
+              <p>Blau markierte Werte sind steuerbar.</p>
+            </div>
+          </div>
+          <label>Szenario
+            <select id="scenarioSelect">
+              <option>Konservativ</option>
+              <option selected>Basis</option>
+              <option>Optimistisch</option>
+              <option>Manuell</option>
+            </select>
+          </label>
+          <p class="control-unit">Änderungen wechseln zu „Manuell“. Szenarien ersetzen nur die Szenarioannahmen.</p><div id="inputControls"></div>
+        </aside>
+
+        <div class="stack">
+          <article class="card">
+            <h2>5- und 10-Jahres-Vergleich</h2>
+            <div class="compare-grid">
+              <div class="compare-card"><span>Direkte Einsparungen · 5 J.</span><b id="fiveSavings">–</b></div>
+              <div class="compare-card"><span>Einnahmen · 5 J.</span><b id="fiveIncome">–</b></div>
+              <div class="compare-card"><span>Steuervorteile · 5 J.</span><b id="fiveTax">–</b></div>
+              <div class="compare-card"><span>Restkosten · 5 J.</span><b id="fiveResidual">–</b></div>
+              <div class="compare-card"><span>Direkte Einsparungen · 10 J.</span><b id="tenSavings">–</b></div>
+              <div class="compare-card"><span>Einnahmen · 10 J.</span><b id="tenIncome">–</b></div>
+              <div class="compare-card"><span>Steuervorteile · 10 J.</span><b id="tenTax">–</b></div>
+              <div class="compare-card"><span>Saldo · 10 J.</span><b id="tenResidual">–</b></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Dein jährlicher Rückfluss</h2><p>Einsparungen, Erlöse und Steuerwirkungen im Zeitverlauf. Zuschüsse fallen im ersten Jahr an.</p><div class="chart-scroll"><svg id="annualChart" class="chart" viewBox="0 0 820 330" role="img" aria-label="Jährlicher Nettonutzen"></svg></div><h3>Jahres-Cashflow</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Jahr</th><th>Direkte Einsparung</th><th>Einspeisung</th><th>Mieterstrom</th><th>Steuer</th><th>Zuschüsse</th><th>Laufende Kosten</th><th>Nettonutzen</th><th>Kumuliert</th></tr></thead>
+                <tbody id="cashflowTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="strategy" class="panel">
+      <div class="two-col strategy-top">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>Informationsstrom nach Tageszeit</h2>
+              <p>Wähle ein Zeitfenster. Die Reihenfolge darunter zeigt, wohin PV-Strom bevorzugt fließt.</p>
+            </div>
+          </div>
+          <div id="timeButtons" class="time-buttons"></div>
+          <div id="flowStage" class="flow-stage"></div>
+        </article>
+
+        <article class="card">
+          <h2>Aktive Strategie</h2>
+          <div class="strategy-controls">
+            <label>Strategiemodus
+              <select id="strategyMode">
+                <option>Standard</option>
+                <option selected>Optimal</option>
+                <option>Max. Autarkie</option>
+              </select>
+            </label>
+            <label>Batterie nutzbar <span id="batteryValue">17,52 kWh</span>
+              <input id="batteryCapacity" type="range" min="8.76" max="35.04" step="8.76" value="17.52" />
+            </label>
+            <label>Mindest-SOC <span id="socMinValue">15 %</span>
+              <input id="socMin" type="range" min="5" max="35" step="5" value="15" />
+            </label>
+            <label>Ziel-SOC 15 Uhr <span id="socTargetValue">85 %</span>
+              <input id="socTarget" type="range" min="60" max="100" step="5" value="85" />
+            </label>
+          </div>
+          <p class="model-note">Batteriegröße und SOC sind Betriebsvorgaben. Die Jahresrechnung verwendet Deckungsquoten und Strategiefaktoren; diese Regler verändern die Wirtschaftlichkeit nicht. Zusätzliche Speicherkosten sind nicht separat modelliert.</p><div class="callout"><strong>Grundregel:</strong> Direktverbrauch schlägt Speicherung. Das Auto soll nicht aus dem Hausspeicher geladen werden, wenn dadurch später Haushaltsstrom aus dem Netz gekauft werden muss.</div>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Prioritätsmatrix</h2>
+        <div class="priority-legend">
+          <span><i class="p5"></i>5 höchste</span><span><i class="p4"></i>4 hoch</span><span><i class="p3"></i>3 mittel</span><span><i class="p2"></i>2 niedrig</span><span><i class="p1"></i>1 nur bei Überschuss</span>
+        </div>
+        <div class="table-wrap"><table id="priorityTable"></table></div>
+      </article>
+    </section>
+
+    <section id="tax" class="panel">
+      <div class="two-col">
+        <article class="card">
+          <h2>Förderung Wärmepumpe</h2>
+          <div class="metric-list">
+            <div><span>förderfähige Kosten</span><b id="taxEligible">–</b></div>
+            <div><span>KfW Grundförderung</span><b id="taxBaseGrant">–</b></div>
+            <div><span>Klimageschwindigkeitsbonus</span><b id="taxClimateGrant">–</b></div>
+            <div><span>Mannheim / regional</span><b id="taxLocalGrant">–</b></div>
+            <div class="total"><span>Gesamtzuschüsse</span><b id="taxGrantTotal">–</b></div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>Steuerwirkung</h2>
+          <div class="metric-list">
+            <div><span>V+V-Erhaltungsaufwand</span><b id="taxDeductible">–</b></div>
+            <div><span>Verteilung</span><b id="taxYears">–</b></div>
+            <div><span>jährlicher V+V-Steuereffekt</span><b id="taxAnnual">–</b></div>
+            <div><span>PV §35a einmalig</span><b id="tax35a">–</b></div>
+            <div><span>0-%-USt PV (nur Info)</span><b id="taxVatInfo">–</b></div>
+          </div>
+        </article>
+      </div>
+      <article class="card warning">
+        <h2>Hinweis</h2>
+        <p>Das ist eine Planungsrechnung aus dem Excel-Modell, keine Steuer- oder Förderzusage. Förderbedingungen 2027, die konkrete Zuordnung des Zuschusses zum vermieteten Anteil und die steuerliche Behandlung sollten vor Antrag bzw. Steuererklärung nochmals geprüft werden.</p>
+      </article>
+    </section>
+
+    <section id="assumptions" class="panel">
+      <article class="card">
+        <h2>So rechnet das Modell</h2><p id="modelCoverage"></p><p>Jahresmodell mit PV-Deckungsquoten, ohne Stundenprofile, Speicherverluste oder Abzinsung. Warmwasser ist im Wärmepumpenverbrauch enthalten. Amortisation wird innerhalb des Übergangsjahres linear interpoliert; Zuschüsse und einmalige Steuerwirkungen werden in Jahr 1 gebucht. Finanzierung ist nicht Bestandteil dieser App.</p>
+        <p>Die Startwerte und die Rechenlogik stammen aus der korrigierten Excel-Datei vom 7. Oktober 2026. Das Web-Modell übernimmt insbesondere:</p>
+        <ul>
+          <li>Heidelberg-PV: 24,96 kWp, 30.839 €, ca. 28.523 kWh Ertrag im ersten Jahr.</li>
+          <li>Wärmepumpe: Planwert 40.000 € und ca. 5.000 kWh Strombedarf/Jahr.</li>
+          <li>Strom: 24 ct/kWh + 18 €/Monat, fünf Jahre Preisgarantie.</li>
+          <li>Verbrauch: 6.500 kWh Haushalt, 3.000 kWh Wallbox, 5.000 kWh Wärmepumpe, 3.500 kWh Mietwohnung.</li>
+          <li>Mieterstrom/Gebäudestrom und Einspeisevergütung werden getrennt als Einnahmen ausgewiesen.</li>
+          <li>V+V-Steuerwirkung kann über 2–5 Jahre verteilt werden; Standard ist 5 Jahre.</li>
+        </ul><p>Korrigierte Bezüge: Mieterstromdeckung wird aus Basisdeckung × Strategiefaktor ermittelt (Verbrauchsstrategie!G10). V+V verwendet den vermieteten Flächenanteil, PV-Arbeitskosten den selbstgenutzten Anteil. Förder- und Steuerwerte sind editierbare Annahmen aus der Excel, keine aktuell verifizierten Ansprüche.</p>
+      </article>
+      <article class="card">
+        <h2>GitHub Pages</h2>
+        <p>Die App benötigt keinen Server, keine Datenbank und keine externen JavaScript-Bibliotheken. Dadurch kann sie direkt aus dem Repository-Root via GitHub Pages veröffentlicht werden.</p>
+        <p>Die Konfiguration wird nur lokal im Browser gespeichert. Über „Konfiguration kopieren“ kannst du einen JSON-Datensatz in die Zwischenablage übernehmen.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <span>Simulation auf Basis des Excel-Modells · Stand Oktober 2026</span>
+    <span>Planungsmodell · keine Steuer-/Förderzusage</span>
+  </footer>
+
+  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="app.js"></script>
+</body>
+</html>
+
