@@ -250,7 +250,7 @@
   }
   function update() { config=normalize(config); render(simulate(config)); save(); }
   async function exportConfig() {
-    const json=JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',config:normalize(config)},null,2);
+    const json=JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),config:normalize(config)},null,2);
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(json); status('Konfiguration als JSON kopiert.');
@@ -277,7 +277,8 @@
     $('timeButtons').addEventListener('click',event=> { const button=event.target.closest('[data-time]'); if(button) {config.timeIndex=Number(button.dataset.time); update();} });
     $('resetBtn').addEventListener('click',()=> {config=defaults(); status('Standardwerte wiederhergestellt.'); sync(); update(); });
     $('shareBtn').addEventListener('click',exportConfig);
-    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',config},null,2)));
+    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),config},null,2)));
   }
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
+

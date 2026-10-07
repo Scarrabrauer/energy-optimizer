@@ -25,11 +25,13 @@
     <button class="tab active" data-tab="overview">Übersicht</button>
     <button class="tab" data-tab="simulation">Simulation</button>
     <button class="tab" data-tab="strategy">Verbrauchsstrategie</button>
+    <button class="tab" data-tab="building">Haus & Energie</button>
     <button class="tab" data-tab="tax">Steuern & Förderung</button>
     <button class="tab" data-tab="assumptions">Annahmen</button>
   </nav>
 
   <main>
+    <section id="building" class="panel"><div id="propertyApp"></div></section>
     <section id="overview" class="panel active"><div class="section-intro"><div><span class="eyebrow">DEIN ENERGIEPROJEKT</span><h2>Der Blick aufs Ganze</h2></div><span class="live-label"><i></i> Lokal berechnet</span></div>
       <div class="hero-grid">
         <article class="hero-card">
@@ -236,7 +238,7 @@
     <span>Planungsmodell · keine Steuer-/Förderzusage</span>
   </footer>
 
-  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="app.js"></script>
+  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="app.js"></script><script src="property.js"></script>
 </body>
 </html>
 
