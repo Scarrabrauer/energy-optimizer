@@ -23,6 +23,8 @@
 
   <nav class="tabs" aria-label="Bereiche">
     <button class="tab active" data-tab="overview">Übersicht</button>
+    <button class="tab" data-tab="pv">PV-Anlage</button>
+    <button class="tab" data-tab="wp">Wärmepumpe</button>
     <button class="tab" data-tab="simulation">Simulation</button>
     <button class="tab" data-tab="strategy">Verbrauchsstrategie</button>
     <button class="tab" data-tab="building">Haus & Energie</button>
@@ -31,6 +33,8 @@
   </nav>
 
   <main>
+    <section id="pv" class="panel"><div id="pvOverview"></div></section>
+    <section id="wp" class="panel"><div id="wpOverview"></div></section>
     <section id="building" class="panel"><div id="propertyApp"></div></section>
     <section id="overview" class="panel active"><div class="section-intro"><div><span class="eyebrow">DEIN ENERGIEPROJEKT</span><h2>Der Blick aufs Ganze</h2></div><span class="live-label"><i></i> Lokal berechnet</span></div>
       <article class="card"><span class="eyebrow">AKTIVE RECHENBASIS</span><h2 id="activeModel">Eigene Werte</h2><label for="quickOfferSelect">Modell für alle Berechnungen</label><select id="quickOfferSelect"><option value="">Eigene Werte wiederherstellen</option></select><button id="restoreDefaults" class="button secondary">Excel-Standardwerte laden</button><p id="activeModelDetail"></p></article><div class="hero-grid">
