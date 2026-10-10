@@ -25,6 +25,7 @@
     <button class="tab active" data-tab="overview">Übersicht</button>
     <button class="tab" data-tab="pv">PV-Anlage</button>
     <button class="tab" data-tab="wp">Wärmepumpe</button>
+    <button class="tab" data-tab="decision">Angebote & Entscheidung</button>
     <button class="tab" data-tab="simulation">Simulation</button>
     <button class="tab" data-tab="strategy">Verbrauchsstrategie</button>
     <button class="tab" data-tab="building">Haus & Energie</button>
@@ -33,6 +34,7 @@
   </nav>
 
   <main>
+    <section id="decision" class="panel"><div id="decisionApp"></div></section>
     <section id="pv" class="panel"><div id="pvOverview"></div></section>
     <section id="wp" class="panel"><div id="wpOverview"></div></section>
     <section id="building" class="panel"><div id="propertyApp"></div></section>
@@ -166,7 +168,7 @@
               </select>
             </label>
             <label>Batterie nutzbar <span id="batteryValue">17,52 kWh</span>
-              <input id="batteryCapacity" type="range" min="8.76" max="35.04" step="8.76" value="17.52" />
+              <input id="batteryCapacity" type="range" min="0" max="60" step="0.001" value="17.52" />
             </label>
             <label>Mindest-SOC <span id="socMinValue">15 %</span>
               <input id="socMin" type="range" min="5" max="35" step="5" value="15" />
@@ -243,7 +245,7 @@
     <span>Planungsmodell · keine Steuer-/Förderzusage</span>
   </footer>
 
-  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="profiles.js"></script><script src="app.js"></script><script src="property.js"></script>
+  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="profiles.js"></script><script src="app.js"></script><script src="property.js"></script><script src="decision.js"></script>
 </body>
 </html>
 
