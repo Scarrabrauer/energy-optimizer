@@ -4,6 +4,7 @@
 (function () {
   'use strict';
   const STORAGE_KEY = 'energy-optimizer.config.v1';
+  const offers = typeof module !== 'undefined' && module.exports ? require('./profiles.js') : window.EnergyOfferProfiles;
   // [key, label, default, unit, min, max, step, source]. Percent inputs use 0..100.
   const fields = [
     ['pvCost','PV-Investition',30839,'€',0,1000000,100,'Eingaben!B4'],
@@ -73,11 +74,13 @@
     'Abends: Batterie für Hausbedarf entladen, Netz deckt Restbedarf. Wallbox nicht aus dem Hausspeicher laden.'
   ];
   function defaults() {
-    return Object.assign(Object.fromEntries(fields.map(f => [f[0], f[2]])), {scenario:'Basis',strategy:'Optimal',batteryCapacity:17.52,socMin:15,socTarget:85,timeIndex:3});
+    return Object.assign(Object.fromEntries(fields.map(f => [f[0], f[2]])), {scenario:'Basis',strategy:'Optimal',batteryCapacity:17.52,socMin:15,socTarget:85,timeIndex:3,offerId:'',tenantEnabled:1});
   }
   function normalize(raw) {
     const c = defaults();
     if (!raw || typeof raw !== 'object') return c;
+    if (Object.hasOwn(offers,raw.offerId)) c.offerId=raw.offerId;
+    if (raw.tenantEnabled===0 || raw.tenantEnabled===1) c.tenantEnabled=raw.tenantEnabled;
     fields.forEach(([key,,value,,min,max,step]) => {
       if (typeof raw[key] === 'number' && Number.isFinite(raw[key])) c[key] = Math.min(max,Math.max(min,step === 1 ? Math.round(raw[key]) : raw[key]));
     });
@@ -95,7 +98,7 @@
   function simulate(input) {
     const c = normalize(input), f = factors[c.strategy];
     const ownCoverage = Math.min(0.9,c.ownCoverage/100*f[0]);
-    const tenantCoverage = Math.min(1,c.tenantCoverage/100*f[1]);
+    const tenantCoverage = c.tenantEnabled ? Math.min(1,c.tenantCoverage/100*f[1]) : 0;
     const investment = c.pvCost+c.wpCost;
     const eligible = Math.min(c.wpCost,c.eligibleCap);
     const baseGrant = eligible*c.baseGrantRate/100;
@@ -121,7 +124,7 @@
       const savings = baseline-project;
       const feedIncome = feed*c.feedTariff;
       const tenantIncome = tenant*c.tenantPrice*Math.pow(1+c.tenantGrowth/100,year-1);
-      const costs = c.wpMaintenance+c.pvMaintenance+c.billingCost;
+      const costs = c.wpMaintenance+c.pvMaintenance+(c.tenantEnabled?c.billingCost:0);
       const tax = (year<=c.taxYears ? annualTax : 0)+(year===1 ? tax35a : 0);
       const grants = year===1 ? grant : 0;
       const net = savings+feedIncome+tenantIncome-costs+tax+grants;
@@ -138,7 +141,11 @@
     }
     return {config:c,investment,netInvestment:investment-grant,eligible,baseGrant,climateGrant,grant,deductible,annualTax,tax35a,vatInfo:c.pvCost*0.19,ownCoverage,tenantCoverage,years,payback,five:totals(5),ten:totals(10)};
   }
-  const api = {defaults,normalize,simulate,fields,presets,priorities};
+  function applyOffer(input,id) {
+    if (!Object.hasOwn(offers,id)) return normalize(input);
+    return normalize({...normalize(input),...offers[id].parameters,offerId:id,scenario:'Manuell'});
+  }
+  const api = {defaults,normalize,simulate,fields,presets,priorities,offers,applyOffer};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document === 'undefined') return;
   const euro = n => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
@@ -174,6 +181,8 @@
     });
   }
   function sync() {
+    $('offerSelect').value=config.offerId;
+    $('tenantEnabled').checked=Boolean(config.tenantEnabled);
     fields.forEach(([key]) => { const el=$('param-'+key); el.value=Number(config[key].toFixed(4)); el.setCustomValidity(''); el.removeAttribute('aria-invalid'); });
     $('scenarioSelect').value=config.scenario;
     $('strategyMode').value=config.strategy;
@@ -201,6 +210,7 @@
     $('flowStage').innerHTML=`<div class="flow-source"><strong>${times[config.timeIndex]} Uhr</strong><span>${config.timeIndex===0||config.timeIndex===5?'Batterie / Restbedarf Netz':'PV nach Verfügbarkeit'}</span></div><p>${interpretations[config.timeIndex]}</p>`+sorted.map(r=>`<div class="flow-target p${r.score}"><span class="rank">${r.score}</span><div><strong>${r.name}</strong><div class="meta">${r.note}</div></div><span class="score">P${r.score}</span></div>`).join('')+`<div class="callout">Gleiche Zahlen bedeuten gleichen Rang. Die Matrix ist eine Betriebsempfehlung für alle Strategiemodi. Mindest-SOC ${config.socMin} %, Ziel um 15 Uhr ${config.socTarget} %. Für 23–24 Uhr gilt ergänzend der Nachtmodus.</div>`;
   }
   function render(m) {
+    renderOffer();
     text('kpiInvestment',euro(m.investment)); text('kpiNetInvestment',euro(m.netInvestment)); text('kpiTenYear',euro(m.ten.balance));
     const months=m.payback===null?null:Math.round(m.payback*12);
     text('kpiPayback',months===null?'> 10 Jahre':`${Math.floor(months/12)} J. ${months%12} Mon.`);
@@ -249,6 +259,15 @@
     $('annualChart').innerHTML=svg;
   }
   function update() { config=normalize(config); render(simulate(config)); save(); }
+  function renderOffer() {
+    const offer=offers[$('offerSelect').value];
+    $('tenantEnabled').checked=Boolean(config.tenantEnabled);
+    $('applyOffer').disabled=!offer;
+    if(!offer){$('offerDetail').textContent='Kein Anbieterprofil ausgewählt. Nox kann später mit eigenen, belegten Angebotsdaten ergänzt werden.';return;}
+    const h=offer.hardware,r=offer.reference;
+    const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    $('offerDetail').innerHTML=`<div class="callout"><strong>${escape(offer.name)}</strong><p>${escape(h.modules)}<br>${escape(h.inverter)} · ${escape(h.battery)}<br>${escape(h.gateway)}<br>Speicher: ${number(h.usableBattery)} kWh nutzbar / ${number(h.pvsolBattery)} kWh in PV*SOL</p><p>${escape(offer.source)}</p></div><div class="energy-summary"><div><span>Angebotspreis PV</span><b>${euro(offer.parameters.pvCost)}</b></div><div><span>PV*SOL-Ertrag</span><b>${energy(r.yield)}</b></div><div><span>PV*SOL-Einspeisung</span><b>${energy(r.feed)}</b></div><div><span>PV*SOL-Autarkie</span><b>${number(r.autarky)} %</b></div><div><span>PV*SOL-Eigenverbrauch</span><b>${number(r.selfConsumption)} %</b></div></div><p><strong>Anbieterreferenz PV: ${Math.floor(r.paybackMonths/12)} Jahre ${r.paybackMonths%12} Monate Amortisation</strong> ohne zusätzlich angesetzten Mieterstromerlös. Kein Zielwert unserer kombinierten PV-/WP-Rechnung.</p><p>${escape(offer.notes)}</p><p>Mieterstrom-Annahme im Profil: 70 % × 3.500 kWh = 2.450 kWh zu 0,22 €/kWh = 539 € brutto/Jahr vor Abrechnungskosten. Strategiemodus, Degradation, verfügbarer PV-Ertrag und manuelle Änderungen können den tatsächlichen Modellwert verändern. Der Erlös wird aus den zugeordneten kWh berechnet, niemals pauschal zusätzlich addiert.</p><p>Aktive Rechenbasis: ${config.offerId===offer.id?'Dieses Profil wurde übernommen; aktuelle Eingaben und Szenarioänderungen gelten.':'Dieses Angebot wird nur angezeigt. Bitte Profilwerte übernehmen.'}</p>`;
+  }
   async function exportConfig() {
     const json=JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),config:normalize(config)},null,2);
     try {
@@ -262,7 +281,11 @@
   }
   function init() {
     const message=document.createElement('p'); message.id='appStatus'; message.setAttribute('role','status'); message.setAttribute('aria-live','polite'); document.querySelector('main').prepend(message);
+    Object.values(offers).forEach(offer=>{const option=document.createElement('option');option.value=offer.id;option.textContent=offer.name;$('offerSelect').appendChild(option);});
     load(); controls(); sync(); render(simulate(config));
+    $('offerSelect').addEventListener('change',renderOffer);
+    $('applyOffer').addEventListener('click',()=>{config=applyOffer(config,$('offerSelect').value);sync();update();status('Angebotsprofil übernommen. PV*SOL-Referenzen bleiben getrennt von der eigenen Simulation.');});
+    $('tenantEnabled').addEventListener('change',event=>{config.tenantEnabled=event.target.checked?1:0;config.scenario='Manuell';sync();update();});
     document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=> {
       document.querySelectorAll('[data-tab]').forEach(b=> { b.classList.toggle('active',b===button); b.setAttribute('aria-pressed',String(b===button)); });
       document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.tab));
