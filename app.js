@@ -154,15 +154,16 @@
   const $ = id => document.getElementById(id);
   const text = (id,value) => { $(id).textContent = value; };
   let config = defaults();
+  let customConfig=defaults();
   function status(message) { text('appStatus',message); }
   function save() {
-    try { localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,config})); }
+    try { localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,config,customConfig})); }
     catch (_) { status('Lokales Speichern ist gesperrt. Änderungen gelten nur für diese Sitzung.'); }
   }
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && saved.version === 1) config = normalize(saved.config);
+      if (saved && saved.version === 1) { config = normalize(saved.config); customConfig=normalize(saved.customConfig || (config.offerId ? defaults() : config)); }
     } catch (_) { status('Gespeicherte Einstellungen konnten nicht geladen werden. Standardwerte sind aktiv.'); }
   }
   function controls() {
@@ -182,6 +183,7 @@
   }
   function sync() {
     $('offerSelect').value=config.offerId;
+    $('quickOfferSelect').value=config.offerId;
     $('tenantEnabled').checked=Boolean(config.tenantEnabled);
     fields.forEach(([key]) => { const el=$('param-'+key); el.value=Number(config[key].toFixed(4)); el.setCustomValidity(''); el.removeAttribute('aria-invalid'); });
     $('scenarioSelect').value=config.scenario;
@@ -211,6 +213,9 @@
   }
   function render(m) {
     renderOffer();
+    $('quickOfferSelect').value=config.offerId;
+    text('activeModel',config.offerId?offers[config.offerId].name:'Eigene Werte');
+    text('activeModelDetail',`Aktuell: ${number(config.pvPower)} kWp · ${energy(config.pvYield)} PV/Jahr · ${euro(config.pvCost)} PV-Investition · ${energy(config.wpDemand)} Wärmepumpenstrom/Jahr · Mieterstrom ${config.tenantEnabled?'an':'aus'}. Szenario: ${config.scenario}. Diese Werte gelten für Dashboard, Jahresrechnung, Steuern, PV-Verteilung und den geplanten Energiezustand des Hauses.`);
     text('kpiInvestment',euro(m.investment)); text('kpiNetInvestment',euro(m.netInvestment)); text('kpiTenYear',euro(m.ten.balance));
     const months=m.payback===null?null:Math.round(m.payback*12);
     text('kpiPayback',months===null?'> 10 Jahre':`${Math.floor(months/12)} J. ${months%12} Mon.`);
@@ -241,7 +246,7 @@
     }).join('')+`<text x="120" y="108" text-anchor="middle" fill="#9db3c5" font-size="12">PV-ERTRAG</text><text x="120" y="139" text-anchor="middle" fill="#eaf2f8" font-size="27" font-weight="600">${number(r.pv)}</text><text x="120" y="159" text-anchor="middle" fill="#9db3c5" font-size="11">kWh / Jahr</text>`;
     $('energyLegend').innerHTML=items.map(([label,value],i)=>`<div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span><div>${label}<b>${energy(value)}</b><span>${number(r.pv?value/r.pv*100:0)} % des PV-Ertrags</span></div></div>`).join('');
     const cases=Object.keys(presets).map(name=>{
-      const c={...config,scenario:name}; scenarioKeys.forEach((key,i)=>c[key]=presets[name][i]); return [name,simulate(c).ten.balance];
+      return [name,simulate(scenarioConfig(config,name)).ten.balance];
     });
     const peak=Math.max(1,...cases.map(([,v])=>Math.abs(v)));
     $('scenarioComparison').innerHTML=cases.map(([name,value])=>`<div class="scenario-result"><span>${name}</span><b class="${value<0?'negative':'positive'}">${euro(value)}</b><div class="bar-track"><div class="bar-fill" style="width:${Math.abs(value)/peak*100}%;background:${value<0?'#e78d93':'#88ecc2'}"></div></div></div>`).join('');
@@ -258,18 +263,30 @@
     svg+='<text x="430" y="320" text-anchor="middle">Jahr · Zuschüsse im ersten Jahr · negative Werte rot</text>';
     $('annualChart').innerHTML=svg;
   }
-  function update() { config=normalize(config); render(simulate(config)); save(); }
+  function update() { config=normalize(config); if(!config.offerId)customConfig={...config}; render(simulate(config)); save(); window.dispatchEvent(new CustomEvent('energy-config-change',{detail:{...config}})); }
+  window.energyActiveConfig=()=>({...config});
+  window.energySetDemand=(gas,wp)=>{config.gasDemand=gas;config.wpDemand=wp;config.scenario='Manuell';sync();update();};
+  function switchOffer(id){
+    if(config.offerId==='')customConfig={...config};
+    config=id?applyOffer(config,id):normalize({...customConfig,offerId:''});sync();update();
+    status(id?'Profil aktiviert. Alle Ansichten wurden aktualisiert.':'Eigene Werte wiederhergestellt.');
+  }
+  function scenarioConfig(input,name){
+    const next={...input,scenario:name};scenarioKeys.forEach((key,i)=>next[key]=presets[name][i]);
+    if(input.offerId){['pvYield','tenantCoverage','tenantPrice','tenantGrowth'].forEach(key=>next[key]=input[key]);}
+    return next;
+  }
   function renderOffer() {
     const offer=offers[$('offerSelect').value];
     $('tenantEnabled').checked=Boolean(config.tenantEnabled);
-    $('applyOffer').disabled=!offer;
+    $('applyOffer').disabled=false;
     if(!offer){$('offerDetail').textContent='Kein Anbieterprofil ausgewählt. Nox kann später mit eigenen, belegten Angebotsdaten ergänzt werden.';return;}
     const h=offer.hardware,r=offer.reference;
     const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     $('offerDetail').innerHTML=`<div class="callout"><strong>${escape(offer.name)}</strong><p>${escape(h.modules)}<br>${escape(h.inverter)} · ${escape(h.battery)}<br>${escape(h.gateway)}<br>Speicher: ${number(h.usableBattery)} kWh nutzbar / ${number(h.pvsolBattery)} kWh in PV*SOL</p><p>${escape(offer.source)}</p></div><div class="energy-summary"><div><span>Angebotspreis PV</span><b>${euro(offer.parameters.pvCost)}</b></div><div><span>PV*SOL-Ertrag</span><b>${energy(r.yield)}</b></div><div><span>PV*SOL-Einspeisung</span><b>${energy(r.feed)}</b></div><div><span>PV*SOL-Autarkie</span><b>${number(r.autarky)} %</b></div><div><span>PV*SOL-Eigenverbrauch</span><b>${number(r.selfConsumption)} %</b></div></div><p><strong>Anbieterreferenz PV: ${Math.floor(r.paybackMonths/12)} Jahre ${r.paybackMonths%12} Monate Amortisation</strong> ohne zusätzlich angesetzten Mieterstromerlös. Kein Zielwert unserer kombinierten PV-/WP-Rechnung.</p><p>${escape(offer.notes)}</p><p>Mieterstrom-Annahme im Profil: 70 % × 3.500 kWh = 2.450 kWh zu 0,22 €/kWh = 539 € brutto/Jahr vor Abrechnungskosten. Strategiemodus, Degradation, verfügbarer PV-Ertrag und manuelle Änderungen können den tatsächlichen Modellwert verändern. Der Erlös wird aus den zugeordneten kWh berechnet, niemals pauschal zusätzlich addiert.</p><p>Aktive Rechenbasis: ${config.offerId===offer.id?'Dieses Profil wurde übernommen; aktuelle Eingaben und Szenarioänderungen gelten.':'Dieses Angebot wird nur angezeigt. Bitte Profilwerte übernehmen.'}</p>`;
   }
   async function exportConfig() {
-    const json=JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),config:normalize(config)},null,2);
+    const json=JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),customConfig,config:normalize(config)},null,2);
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(json); status('Konfiguration als JSON kopiert.');
@@ -281,10 +298,12 @@
   }
   function init() {
     const message=document.createElement('p'); message.id='appStatus'; message.setAttribute('role','status'); message.setAttribute('aria-live','polite'); document.querySelector('main').prepend(message);
-    Object.values(offers).forEach(offer=>{const option=document.createElement('option');option.value=offer.id;option.textContent=offer.name;$('offerSelect').appendChild(option);});
+    Object.values(offers).forEach(offer=>{const option=document.createElement('option');option.value=offer.id;option.textContent=offer.name;$('offerSelect').appendChild(option);$('quickOfferSelect').appendChild(option.cloneNode(true));});
     load(); controls(); sync(); render(simulate(config));
     $('offerSelect').addEventListener('change',renderOffer);
-    $('applyOffer').addEventListener('click',()=>{config=applyOffer(config,$('offerSelect').value);sync();update();status('Angebotsprofil übernommen. PV*SOL-Referenzen bleiben getrennt von der eigenen Simulation.');});
+    $('applyOffer').addEventListener('click',()=>switchOffer($('offerSelect').value));
+    $('quickOfferSelect').addEventListener('change',e=>switchOffer(e.target.value));
+    $('restoreDefaults').addEventListener('click',()=>{config=defaults();customConfig=defaults();sync();update();status('Excel-Standardwerte geladen.');});
     $('tenantEnabled').addEventListener('change',event=>{config.tenantEnabled=event.target.checked?1:0;config.scenario='Manuell';sync();update();});
     document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=> {
       document.querySelectorAll('[data-tab]').forEach(b=> { b.classList.toggle('active',b===button); b.setAttribute('aria-pressed',String(b===button)); });
@@ -292,16 +311,17 @@
     }));
     $('scenarioSelect').addEventListener('change',event=> {
       config.scenario=event.target.value;
-      if (presets[config.scenario]) scenarioKeys.forEach((key,i)=> { config[key]=presets[config.scenario][i]; });
+      if (presets[config.scenario]) config=scenarioConfig(config,config.scenario);
       status(''); sync(); update();
     });
     $('strategyMode').addEventListener('change',event=> { config.strategy=event.target.value; update(); });
     ['batteryCapacity','socMin','socTarget'].forEach(key=>$(key).addEventListener('input',event=> { config[key]=Number(event.target.value); update(); }));
     $('timeButtons').addEventListener('click',event=> { const button=event.target.closest('[data-time]'); if(button) {config.timeIndex=Number(button.dataset.time); update();} });
-    $('resetBtn').addEventListener('click',()=> {config=defaults(); status('Standardwerte wiederhergestellt.'); sync(); update(); });
+    $('resetBtn').addEventListener('click',()=> {config=defaults(); customConfig=defaults(); status('Standardwerte wiederhergestellt.'); sync(); update(); });
     $('shareBtn').addEventListener('click',exportConfig);
-    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),config},null,2)));
+    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),customConfig,config},null,2)));
   }
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
+
 

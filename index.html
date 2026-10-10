@@ -33,7 +33,7 @@
   <main>
     <section id="building" class="panel"><div id="propertyApp"></div></section>
     <section id="overview" class="panel active"><div class="section-intro"><div><span class="eyebrow">DEIN ENERGIEPROJEKT</span><h2>Der Blick aufs Ganze</h2></div><span class="live-label"><i></i> Lokal berechnet</span></div>
-      <div class="hero-grid">
+      <article class="card"><span class="eyebrow">AKTIVE RECHENBASIS</span><h2 id="activeModel">Eigene Werte</h2><label for="quickOfferSelect">Modell für alle Berechnungen</label><select id="quickOfferSelect"><option value="">Eigene Werte wiederherstellen</option></select><button id="restoreDefaults" class="button secondary">Excel-Standardwerte laden</button><p id="activeModelDetail"></p></article><div class="hero-grid">
         <article class="hero-card">
           <span class="label">Gesamtinvestition</span>
           <strong id="kpiInvestment">–</strong>
@@ -90,7 +90,7 @@
     </section>
 
     <section id="simulation" class="panel">
-      <article class="card"><div class="card-head"><div><span class="eyebrow">ANGEBOTSVERGLEICH</span><h2>Dein Angebotsprofil</h2></div></div><label for="offerSelect">Angebot auswählen</label><select id="offerSelect"><option value="">Eigene Werte / Excel-Startwerte</option></select><button id="applyOffer" class="button">Profilwerte übernehmen</button><p>Die Übernahme ersetzt PV-Kosten, Leistung, Ertrag, Speichergröße und Verbrauchsbasis. WP-Projektkosten, Tarife, Steuern und Förderannahmen bleiben deine aktuellen Planwerte. Szenario wird Manuell.</p><div id="offerDetail"></div><label for="tenantEnabled"><input id="tenantEnabled" type="checkbox"> PV-Strom an Einliegerwohnung verkaufen (§42b-Annahme)</label><p>Bei ausgeschaltetem Verkauf werden der Mietwohnung im Jahresmodell keine PV-kWh zugeordnet. Ihr Stromverbrauch wird separat extern gedeckt. Die gemeinsame physische PV*SOL-Bilanz lässt sich daraus nicht direkt reproduzieren. Abrechnungskosten fallen hier nur bei aktiviertem Verkauf an. Keine Prüfung von Vertrag, Messkonzept oder rechtlichen Voraussetzungen.</p></article>
+      <article class="card"><div class="card-head"><div><span class="eyebrow">ANGEBOTSVERGLEICH</span><h2>Dein Angebotsprofil</h2></div></div><label for="offerSelect">Angebot auswählen</label><select id="offerSelect"><option value="">Eigene Werte wiederherstellen</option></select><button id="applyOffer" class="button">Profilwerte übernehmen</button><p>Die Übernahme ersetzt PV-Kosten, Leistung, Ertrag, Speichergröße und Verbrauchsbasis. WP-Projektkosten, Tarife, Steuern und Förderannahmen bleiben deine aktuellen Planwerte. Szenario wird Manuell.</p><div id="offerDetail"></div><label for="tenantEnabled"><input id="tenantEnabled" type="checkbox"> PV-Strom an Einliegerwohnung verkaufen (§42b-Annahme)</label><p>Bei ausgeschaltetem Verkauf werden der Mietwohnung im Jahresmodell keine PV-kWh zugeordnet. Ihr Stromverbrauch wird separat extern gedeckt. Die gemeinsame physische PV*SOL-Bilanz lässt sich daraus nicht direkt reproduzieren. Abrechnungskosten fallen hier nur bei aktiviertem Verkauf an. Keine Prüfung von Vertrag, Messkonzept oder rechtlichen Voraussetzungen.</p></article>
       <div class="layout-sidebar">
         <aside class="card controls sticky">
           <div class="card-head">
