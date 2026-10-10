@@ -166,7 +166,11 @@
     Object.values(result).forEach(part=>{if(part.investment===0)part.payback=0;});
     return result;
   }
-  const api = {defaults,normalize,simulate,fields,presets,priorities,offers,applyOffer,components};
+  function pvAlternatives(input) {
+    const withWP=simulate(input),withoutWP=simulate({...withWP.config,wpDemand:0});
+    return {withWP:{model:withWP,pv:components(withWP).pv},withoutWP:{model:withoutWP,pv:components(withoutWP).pv}};
+  }
+  const api = {defaults,normalize,simulate,fields,presets,priorities,offers,applyOffer,components,pvAlternatives};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document === 'undefined') return;
   const euro = n => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
@@ -270,7 +274,28 @@
       const points=[-part.investment,...part.years.map(x=>x.balance)].map((v,i)=>`${65+i*65},${y(v)}`).join(' ');
       const svg=`<svg class="chart" viewBox="0 0 780 300" role="img" aria-label="Kumulierter Saldo ${isPv?'PV':'Wärmepumpe'}"><title>Kumulierter Saldo nach Investition</title><line class="zero" x1="65" x2="715" y1="${y(0)}" y2="${y(0)}"/><text x="10" y="${y(hi)}">${number(hi/1000)} T€</text><text x="10" y="${y(lo)}">${number(lo/1000)} T€</text><polyline class="line" fill="none" points="${points}"/>${[0,5,10].map(i=>`<text x="${65+i*65}" y="270" text-anchor="middle">Jahr ${i}</text>`).join('')}</svg>`;
       $(key+'Overview').innerHTML=`<div class="section-intro"><div><span class="eyebrow">${esc(model)} · ${esc(c.scenario)}</span><h2>${isPv?'Deine PV-Anlage':'Deine Wärmepumpe'}</h2><p>Aktuelle Werte aus der gemeinsamen Simulation. Änderungen im Bereich Simulation gelten auch hier.</p></div></div><div class="hero-grid">${kpis.map(([label,value,note])=>`<article class="hero-card"><span class="label">${label}</span><strong>${value}</strong><small>${note}</small></article>`).join('')}</div><div class="two-col"><article class="card"><h2>Kumulierte Wirtschaftlichkeit</h2><div class="chart-scroll">${svg}</div><div class="compare-grid"><div class="compare-card"><span>Saldo nach 5 Jahren</span><b>${euro(part.years[4].balance)}</b></div><div class="compare-card"><span>Saldo nach 10 Jahren</span><b>${euro(part.years[9].balance)}</b></div></div></article><article class="card"><h2>${isPv?'PV-Verteilung':'Verbrauch vor und nach Umstellung'}</h2>${flows.map(([label,v])=>`<div class="house-bar"><span>${label}</span><b>${energy(v)}</b><div class="bar-track"><div class="bar-fill" style="width:${v/peak*100}%"></div></div></div>`).join('')}<p>${isPv?`Modellierter eigener Netzbezug nach PV: ${energy(r.grid)}. Batterie: ${energy(c.batteryCapacity)} nutzbar; Kapazität allein verändert die Jahresdeckungsquote nicht.`:'Gas und Strom sind unterschiedliche Energieträger. Der geringere Stromeinsatz entsteht durch Umweltwärme; die Balken sind kein Vergleich des Wärmebedarfs. Holzverbrauch wird separat unter Haus & Energie berücksichtigt.'}</p></article></div><article class="card"><h2>Jährliche Rechnung</h2><div class="table-wrap"><table><thead><tr><th>Jahr</th><th>Einsparung</th><th>Erlöse</th><th>Laufende Kosten</th><th>Steuer</th><th>Zuschüsse</th><th>Nettonutzen</th><th>Saldo</th></tr></thead><tbody>${part.years.map(row=>`<tr><td>${row.year}</td>${[row.savings,row.income,-row.costs,row.tax,row.grant,row.net,row.balance].map(v=>`<td class="${v<0?'negative':'positive'}">${euro(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></article><article class="card"><h2>So wird der gemeinsame Nutzen aufgeteilt</h2><p>${isPv?'PV erhält den Wert sämtlicher selbst genutzter PV-kWh, auch der Versorgung der Wärmepumpe, plus Einspeise- und Mieterstromerlöse. Abgezogen werden PV-Wartung und gegebenenfalls Abrechnung. Die einmalige PV-Steuerwirkung wird hier zugeordnet.':'Die Wärmepumpe erhält die vermiedenen Gaskosten einschließlich Grundpreis und Gaswartung. Ihr gesamter Strombedarf wird zum aktuellen Bezugspreis bewertet; WP-Wartung wird abgezogen. WP-Zuschüsse und V+V-Steuerwirkungen werden hier zugeordnet.'}</p><p>Damit ergeben beide Teilrechnungen zusammen exakt die Gesamtbilanz. Die Aufteilung bewertet die Wärmepumpe zuerst ohne PV-Rabatt und die PV anschließend als Zusatznutzen. Andere Zuordnungen der gemeinsamen Einsparung würden die einzelnen Amortisationszeiten verändern. Das sind keine unabhängigen Angebotsprognosen.</p>${isPv&&c.offerId?`<p>Anbieterreferenz PV*SOL: ${Math.floor(offers[c.offerId].reference.paybackMonths/12)} Jahre ${offers[c.offerId].reference.paybackMonths%12} Monate. Abweichende Verbrauchsprofile, Ladeverluste und Berechnungsmethoden; getrennt von dieser Teilrechnung.</p>`:''}</article>`;
+      if(isPv) $('pvOverview').innerHTML += renderPvAlternatives(m);
     });
+  }
+  function renderPvAlternatives(m) {
+    const cases=pvAlternatives(m.config),a=cases.withWP,b=cases.withoutWP;
+    const payback=part=>{if(part.payback===null)return '> 10 Jahre';const months=Math.round(part.payback*12);return `${Math.floor(months/12)} J. ${months%12} Mon.`;};
+    const rows=[
+      ['WP-Strombedarf',energy(a.model.config.wpDemand),energy(0)],
+      ['PV-Ertrag Jahr 1',energy(a.model.years[0].pv),energy(b.model.years[0].pv)],
+      ['Eigene PV-Nutzung Jahr 1',energy(a.model.years[0].own),energy(b.model.years[0].own)],
+      ['PV an Mietwohnung Jahr 1',energy(a.model.years[0].tenant),energy(b.model.years[0].tenant)],
+      ['Einspeisung Jahr 1',energy(a.model.years[0].feed),energy(b.model.years[0].feed)],
+      ['Vermiedener Strombezug Jahr 1',euro(a.pv.years[0].savings),euro(b.pv.years[0].savings)],
+      ['Einspeiseerlöse Jahr 1',euro(a.model.years[0].feedIncome),euro(b.model.years[0].feedIncome)],
+      ['Mieterstromerlöse Jahr 1',euro(a.model.years[0].tenantIncome),euro(b.model.years[0].tenantIncome)],
+      ['PV-Nettonutzen Jahr 1',euro(a.pv.years[0].net),euro(b.pv.years[0].net)],
+      ['PV-Saldo nach 5 Jahren',euro(a.pv.years[4].balance),euro(b.pv.years[4].balance)],
+      ['PV-Saldo nach 10 Jahren',euro(a.pv.years[9].balance),euro(b.pv.years[9].balance)],
+      ['PV-Amortisation',payback(a.pv),payback(b.pv)]
+    ];
+    const peak=Math.max(1,Math.abs(a.pv.years[0].net),Math.abs(b.pv.years[0].net));
+    return `<article class="card" id="pvAlternatives"><span class="eyebrow">PV MIT ODER OHNE HEIZUNGSWECHSEL</span><h2>Was bringt die PV-Anlage in beiden Fällen?</h2><p>Dieselbe PV-Anlage, derselbe Tarif und derselbe Mieterstrom-Schalter. Links gilt der aktuell eingestellte Wärmepumpenverbrauch; rechts bleibt die vorhandene Heizung bestehen und die PV versorgt Haus, Wallbox und gegebenenfalls die Mietwohnung.</p><div class="two-col">${[['Mit Wärmepumpe',a],['Ohne Wärmepumpe',b]].map(([name,item])=>`<div class="compare-card"><span>${name} · PV-Nettonutzen Jahr 1</span><b>${euro(item.pv.years[0].net)}</b><div class="bar-track"><div class="bar-fill" style="width:${Math.abs(item.pv.years[0].net)/peak*100}%;${item.pv.years[0].net<0?'background:#e78d93':''}"></div></div></div>`).join('')}</div><div class="table-wrap"><table><thead><tr><th>Kennzahl</th><th>Mit Wärmepumpe</th><th>Ohne Wärmepumpe</th></tr></thead><tbody>${rows.map(([label,x,y])=>`<tr><th scope="row">${label}</th><td>${x}</td><td>${y}</td></tr>`).join('')}</tbody></table></div><p>Zusätzlicher PV-Nettonutzen durch den WP-Verbrauch im ersten Jahr: <strong>${euro(a.pv.years[0].net-b.pv.years[0].net)}</strong>. Die PV-Investition von ${euro(m.config.pvCost)} bleibt gleich. Gaskosteneinsparung, WP-Investition und WP-Förderung gehören nicht zu dieser PV-Teilrechnung. PV-Wartung, Abrechnung und PV-Steuerwirkung sind enthalten.</p><p>Der elektrische PV-Ertrag ändert sich durch den Heizungswechsel nicht. Die Jahresrechnung setzt in beiden Fällen dieselbe eigene Deckungsquote an; saisonale WP-Last und reale Stundenprofile können den Mehrnutzen verändern. Dies ist keine zweite PV*SOL-Prognose. Bei WP-Verbrauch 0 sind beide Fälle identisch.</p></article>`;
   }
   function graphics(m) {
     const r=m.years[0], colors=['#88ecc2','#8cc7ef','#f0bc76'];
