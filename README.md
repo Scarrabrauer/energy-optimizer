@@ -126,3 +126,29 @@ Notizen und Bewertungen werden lokal unter energy-optimizer.decision.v1 gespeich
 Aktuelles vollständiges Pages-Paket: **index.html, app.js, profiles.js, property.js, decision.js, styles.css, dark.css, .nojekyll, README.md**. Frühere kürzere Dateilisten sind überholt. Diese Dateien gemeinsam ersetzen und committen; die lokale Änderung veröffentlicht sich nicht selbst auf GitHub Pages.
 
 Prüfung dieser Erweiterung: Syntax aller vier JavaScript-Dateien; automatische Tests für Profilübernahme, Wiederherstellung eigener Werte, gemeinsame Rechenbasis, Teilrechnungssummen, PV mit/ohne WP, Nox-Annahmen, Vergleichskosten, Gewichte, Nachweispflicht und Speicherung. Tatsächliche Ereignisfunktionen wurden in einer simulierten DOM-Umgebung ausgeführt. Keine neue visuelle Browserprüfung und kein Live-Deployment durchgeführt.
+
+## Sol-Living und Vergleich mit drei Anbietern — 30. Oktober 2026
+
+Sol-Living ist als reguläres Profil in der Übersicht und in der Simulation verfügbar. Datenbasis: PV-Angebot 16.10.2026 und separates VREY-Angebot 13.10.2026. Heidelberg und Nox Phase 2 bleiben bestehen; der ältere Nox-Stand aus der eingefügten Auswertung wurde ausdrücklich nicht übernommen.
+
+Sol-Living: 53 × AIKO 485 W, gerundet 25,71 kWp, FOX H3-Pro-25.0, EK12 Plus + EK6 Plus mit Junction Box, Smartfox Pro 3 und EPS Box Pro. 17,28 kWh sind angegeben, ihre Einordnung als nominal/nutzbar ist nicht eindeutig. Das Tool setzt vorsichtig 15,552 kWh nutzbar (90 %) als ausdrücklich unbestätigte Annahme an. Jahresertrag 27.304 kWh, Autarkie ca. 70 %, Eigenverbrauch ca. 37 % sind Anbieterreferenzen. Die behaupteten neun Jahre Amortisation sind wegen der enthaltenen Heizkosteneffekte kein direkt vergleichbarer PV-Nachweis und werden nicht zur Kalibrierung benutzt.
+
+Regulärer Basispreis 38.464,41 €. 37.310,48 € nur bei vollständiger Vorkasse mindestens 14 Tage vorher. Standardprofil: ohne Vorkasse, ohne VREY, ohne optionale Versicherung, Mieterstrom aus; Verbrauchsbasis wie die anderen Angebote. 160 €/Jahr Messkosten ohne VREY sind weiterhin nur gemeinsame Planannahme. WP-Kosten, Tarife und Förder-/Steuerparameter stammen aus dem vorhandenen Projekt.
+
+Im Entscheidungstab lassen sich Sol-Living-Pakete unabhängig schalten:
+
+- VREY: 2.856 € einmalig brutto plus 734,11 €/Jahr brutto. Die einmaligen Kosten erhöhen die Vergleichsinvestition; das jährliche Paket ersetzt gemeinsame Messkosten und pauschale Mieterstrom-Abrechnung. Kein doppeltes Addieren von 160 € oder 180 €. Die gesamten VREY-Kosten werden nicht allein der Mietwohnung zugeschrieben. Der Verkaufsschalter bleibt eine unabhängige Annahme.
+- Vorkasse: ausschließlich der bestätigte Skontopreis, mit deutlichem Hinweis auf das Vorleistungsrisiko. Dieser Schalter verbessert nicht automatisch die subjektive Vertragsbewertung.
+- Optionale Versicherung: 8,99 €/Monat = 107,88 €/Jahr als separates Zusatzpaket. Bestehende Wartungs-/Versicherungsannahme bitte überprüfen, um Überschneidungen zu vermeiden.
+
+VREY nennt vier Messstellen, kalkuliert aber fünf Aufnahmen/Datenanbindungen; drei Softwarelizenzen stehen zwei teilnehmenden Wohnungen gegenüber. Angebot bis 29.10.2026 gültig und an den Sol-Living-Ansprechpartner adressiert. Aktualisierter Endkundenpreis erforderlich. Installation der Messtechnik ist ausdrücklich ausgeschlossen. Zusätzliche 800 € für Mieterstromzähler und ggf. 1.400 € Zählerschrank werden nicht ungeprüft addiert; erst schriftlich abgrenzen und als Zusatzkosten erfassen. Auch ohne WP bleibt der angebotene VREY-Paketpreis bestehen, bis ein reduziertes Angebot vorliegt.
+
+Ertragsbasis im Vergleich: gleiche absolute Erzeugung (Kostenszenario), gleicher spezifischer Ertrag je kWp (Basiswert / 24,96 × jeweilige kWp) oder jeweilige Anbieter-Erträge (ungleiche Quellen). Bei gleicher spezifischer Annahme bekommt Sol-Living entsprechend der größeren Anlage mehr Jahresertrag. Jahresmodell bleibt ohne Stundenlasten, saisonales Speichermodell oder berechneten Smartfox-Mehrnutzen.
+
+Der Button „Vergleichswerte übernehmen“ überträgt die tatsächlich angezeigten Werte inklusive Paketen, Zusatzkosten, Ertrag und WP-Verbrauch in die zentrale Simulation. Alle Ansichten rechnen anschließend damit. Die normale Schnellauswahl lädt dagegen das reguläre Anbieterprofil. Wiederholte Übernahme addiert Pakete nicht erneut; Rückkehr zu anderen Profilen entfernt Sol-Living-Zusatzpakete, eigene Werte bleiben wiederherstellbar.
+
+Vorläufiger Score bei regulärem Preis ohne Zusatzpakete: Heidelberg 70,0, Sol-Living 64,5, Nox 50,8. Kriterien/Gewichte unverändert; redaktionelle Einschätzung des schriftlichen Nachweisstands, keine empirische Produktqualitätsmessung. Neue Anbieterantworten und persönliche Prioritäten können die Reihenfolge ändern. Neun neue Sol-Living-Aufgaben enthalten Plan-/Ertragsnachweis, Speicherkompatibilität, Geräteintegration, Backup, SOL CARE, VREY-Mengen/Gültigkeit, vollständige Kosten, Zahlung/Abnahme und individuelles Messschema. Ohne kritische Nachweise bleibt auch ein Score-Favorit nicht entscheidungsreif.
+
+Änderungen: profiles.js, app.js, decision.js, dark.css, README.md; zusätzliche Auswertung ANGEBOTSVERGLEICH.md. Bestehende gespeicherte Score-Gewichte, Bewertungen und Aufgaben werden um den dritten Anbieter ergänzt und bleiben erhalten.
+
+Prüfung: sieben automatische Rechen-/Ereignistests, Syntax aller JS-Dateien und tatsächlicher Edge-Browsertest Desktop/390-px-Mobil. Profilwechsel, Übernahme der Paketkosten in zentrale Konfiguration, wiederholte Übernahme ohne Mehrfachkosten, Speicherung nach Neuladen, Wiederherstellung eigener Werte, drei Tabellenanbieter und fehlender horizontaler Seitenüberlauf geprüft. Desktop-/Mobilvorschau visuell geprüft. Kein GitHub-Commit und keine Veröffentlichung durchgeführt.
