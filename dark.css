@@ -11,3 +11,6 @@ body{background:var(--bg);color:#dce7f0;font-family:"Segoe UI",system-ui,sans-se
 
 /* Three-provider decision comparison */
 .decision-score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:20px 0}.decision-table{min-width:980px}.decision-table th,.decision-table td{min-width:210px}.decision-table th:first-child{min-width:190px}@media(max-width:850px){.decision-score-grid{grid-template-columns:1fr}}
+
+/* Four-provider comparison */
+.decision-score-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.decision-table{min-width:1240px}.decision-table th:first-child{width:20%}@media(max-width:1150px){.decision-score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.decision-score-grid{grid-template-columns:1fr}}
