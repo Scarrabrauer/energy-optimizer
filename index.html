@@ -26,6 +26,7 @@
     <button class="tab" data-tab="pv">PV-Anlage</button>
     <button class="tab" data-tab="wp">Wärmepumpe</button>
     <button class="tab" data-tab="decision">Angebote & Entscheidung</button>
+    <button class="tab" data-tab="regulation">Regeln & Risiken</button>
     <button class="tab" data-tab="simulation">Simulation</button>
     <button class="tab" data-tab="strategy">Verbrauchsstrategie</button>
     <button class="tab" data-tab="building">Haus & Energie</button>
@@ -34,12 +35,13 @@
   </nav>
 
   <main>
+    <section id="regulation" class="panel"><div id="regulationApp"></div></section>
     <section id="decision" class="panel"><div id="decisionApp"></div></section>
     <section id="pv" class="panel"><div id="pvOverview"></div></section>
     <section id="wp" class="panel"><div id="wpOverview"></div></section>
     <section id="building" class="panel"><div id="propertyApp"></div></section>
     <section id="overview" class="panel active"><div class="section-intro"><div><span class="eyebrow">DEIN ENERGIEPROJEKT</span><h2>Der Blick aufs Ganze</h2></div><span class="live-label"><i></i> Lokal berechnet</span></div>
-      <article class="card"><span class="eyebrow">AKTIVE RECHENBASIS</span><h2 id="activeModel">Eigene Werte</h2><label for="quickOfferSelect">Modell für alle Berechnungen</label><select id="quickOfferSelect"><option value="">Eigene Werte wiederherstellen</option></select><button id="restoreDefaults" class="button secondary">Excel-Standardwerte laden</button><p id="activeModelDetail"></p></article><div class="hero-grid">
+      <article class="card"><span class="eyebrow">AKTIVE RECHENBASIS</span><h2 id="activeModel">Eigene Werte</h2><label for="quickOfferSelect">Modell für alle Berechnungen</label><select id="quickOfferSelect"><option value="">Eigene Werte wiederherstellen</option></select><button id="restoreDefaults" class="button secondary">Excel-Standardwerte laden</button><p id="activeModelDetail"></p><p id="regulationActive" class="callout"></p></article><div class="hero-grid">
         <article class="hero-card">
           <span class="label">Gesamtinvestition</span>
           <strong id="kpiInvestment">–</strong>
@@ -241,11 +243,11 @@
   </main>
 
   <footer>
-    <span>Simulation auf Basis des Excel-Modells · Stand Oktober 2026</span>
+    <span>Simulation auf Basis des Excel-Modells · Stand 02.11.2026</span>
     <span>Planungsmodell · keine Steuer-/Förderzusage</span>
   </footer>
 
-  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="profiles.js"></script><script src="app.js"></script><script src="property.js"></script><script src="decision.js"></script>
+  <noscript><p>Bitte JavaScript aktivieren, um die Simulation zu nutzen.</p></noscript><script src="profiles.js"></script><script src="app.js"></script><script src="property.js"></script><script src="decision.js"></script><script src="regulation.js"></script>
 </body>
 </html>
 

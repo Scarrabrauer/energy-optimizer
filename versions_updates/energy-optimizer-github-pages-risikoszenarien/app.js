@@ -28,6 +28,15 @@
     ['providerAnnualCost','Zusatzpaket Versicherung / Service',0,'€/Jahr',0,100000,0.01,'Optionales Anbieterpaket; separat von PV-Wartung'],
     ['bundledBilling','Abrechnung bereits im Messpaket enthalten',0,'0 = nein, 1 = ja',0,1,1,'Bei VREY keine zusätzliche pauschale Abrechnung'],
     ['meterCost','Messstellenbetrieb (jährlicher Planwert)',0,'€/Jahr',0,100000,0.01,'Angebots-/Vergleichsannahme; 0 im Excel-Standard'],
+    ['commissioningYear','Erstes volles Betriebsjahr',2027,'Jahr',2026,2100,1,'Kalenderjahresnäherung; kein anteiliges Inbetriebnahmejahr'],
+    ['regulationEnabled','Regulatorisches Risikoszenario aktiv',0,'0 = aus, 1 = an',0,1,1,'Planannahme, keine geltende Abgabe'],
+    ['transitionYears','Dauer erster Einspeisephase',3,'volle Betriebsjahre',0,20,1,'Frei gewählte Übergangsphase'],
+    ['transitionTariff','Einspeiseerlös erste Phase',0.052,'€/kWh',-0.5,10,0.0001,'Szenarioannahme, keine Förderzusage'],
+    ['marketTariff','Einspeiseerlös danach vor Vermarktungskosten',0.03,'€/kWh',-0.5,10,0.0001,'Annahme für tatsächlich erzielbaren Solarstromerlös'],
+    ['marketingCost','Vermarktungskosten nach erster Phase',120,'€/Jahr',0,100000,0.01,'Nur im aktiven Risikoszenario und nach Übergang'],
+    ['prosumerStartYear','Netzaufschlag ab Kalenderjahr',2029,'Jahr',2026,2100,1,'Annahme; endgültige lokale Ausgestaltung offen'],
+    ['prosumerAnnual','Zusatzkosten je betroffener Marktlokation',100,'€/Jahr',0,100000,0.01,'Absoluter Mehrbetrag; nicht 90 % des Lieferanten-Grundpreises'],
+    ['prosumerLocations','Betroffene Marktlokationen',1,'Anzahl',0,20,1,'Mit Netzbetreiber klären; nicht Anzahl aller Zähler'],
     ['rentedShare','Vermieteter Flächenanteil',100/3,'%',0,100,0.01,'Eingaben!B22'],
     ['taxRate','Grenzsteuersatz',35,'%',0,100,0.1,'Eingaben!B24'],
     ['taxUsability','Nutzbarer V+V-Steuereffekt',100,'%',0,100,1,'Eingaben!B25'],
@@ -125,16 +134,22 @@
       const baseline = (c.houseDemand+c.evDemand)*price+c.electricityBase*12+c.gasDemand*gasPrice+c.gasBase+c.gasMaintenance;
       const project = grid*price+c.electricityBase*12;
       const savings = baseline-project;
-      const feedIncome = feed*c.feedTariff;
+      const calendarYear=c.commissioningYear+year-1;
+      const marketPhase=Boolean(c.regulationEnabled&&year>c.transitionYears);
+      const effectiveFeedTariff=c.regulationEnabled?(marketPhase?c.marketTariff:c.transitionTariff):c.feedTariff;
+      const prosumerCost=c.regulationEnabled&&calendarYear>=c.prosumerStartYear?c.prosumerAnnual*c.prosumerLocations:0;
+      const marketingCost=marketPhase?c.marketingCost:0;
+      const regulationCosts=prosumerCost+marketingCost;
+      const feedIncome = feed*effectiveFeedTariff;
       const tenantIncome = tenant*c.tenantPrice*Math.pow(1+c.tenantGrowth/100,year-1);
-      const costs = c.wpMaintenance+c.pvMaintenance+c.providerAnnualCost+c.meterCost+(c.tenantEnabled&&!c.bundledBilling?c.billingCost:0);
+      const costs = regulationCosts+c.wpMaintenance+c.pvMaintenance+c.providerAnnualCost+c.meterCost+(c.tenantEnabled&&!c.bundledBilling?c.billingCost:0);
       const tax = (year<=c.taxYears ? annualTax : 0)+(year===1 ? tax35a : 0);
       const grants = year===1 ? grant : 0;
       const net = savings+feedIncome+tenantIncome-costs+tax+grants;
       const previous = cumulative;
       cumulative += net;
       if (payback === null && previous<0 && cumulative>=0 && net>0) payback = year-1-previous/net;
-      years.push({year,pv,price,gasPrice,own,tenant,feed,grid,baseline,project,savings,feedIncome,tenantIncome,costs,tax,grants,net,cumulative});
+      years.push({year,calendarYear,effectiveFeedTariff,prosumerCost,marketingCost,regulationCosts,pv,price,gasPrice,own,tenant,feed,grid,baseline,project,savings,feedIncome,tenantIncome,costs,tax,grants,net,cumulative});
     }
     function totals(n) {
       return years.slice(0,n).reduce((t,r) => {
@@ -155,7 +170,7 @@
     m.years.forEach(r=>{
       const pvSavings=r.own*r.price;
       const wpSavings=c.gasDemand*r.gasPrice+c.gasBase+c.gasMaintenance-c.wpDemand*r.price;
-      const pvCosts=c.pvMaintenance+c.providerAnnualCost+c.meterCost+(c.tenantEnabled&&!c.bundledBilling?c.billingCost:0);
+      const pvCosts=r.regulationCosts+c.pvMaintenance+c.providerAnnualCost+c.meterCost+(c.tenantEnabled&&!c.bundledBilling?c.billingCost:0);
       const pvTax=r.year===1?m.tax35a:0;
       const pvNet=pvSavings+r.feedIncome+r.tenantIncome-pvCosts+pvTax;
       const wpNet=wpSavings-c.wpMaintenance+(r.tax-pvTax)+r.grants;
@@ -173,7 +188,13 @@
     const withWP=simulate(input),withoutWP=simulate({...withWP.config,wpDemand:0});
     return {withWP:{model:withWP,pv:components(withWP).pv},withoutWP:{model:withoutWP,pv:components(withoutWP).pv}};
   }
-  const api = {defaults,normalize,simulate,fields,presets,priorities,offers,applyOffer,components,pvAlternatives};
+  function regulationScenarios(input){const c=normalize(input);return [
+    {id:'legacy',name:'Bisherige Rechnung',patch:{regulationEnabled:0}},
+    {id:'grid',name:'Nur Netzaufschlag',patch:{regulationEnabled:1,transitionYears:20,transitionTariff:c.feedTariff,prosumerStartYear:2029,prosumerAnnual:100,marketingCost:0}},
+    {id:'market',name:'Übergang & Marktannahme',patch:{regulationEnabled:1,transitionYears:3,transitionTariff:0.052,marketTariff:0.03,marketingCost:120,prosumerStartYear:2029,prosumerAnnual:100}},
+    {id:'stress',name:'Stress: kein späterer Einspeiseerlös',patch:{regulationEnabled:1,transitionYears:3,transitionTariff:0.052,marketTariff:0,marketingCost:180,prosumerStartYear:2029,prosumerAnnual:150}}
+  ];}
+  const api = {regulationScenarios,defaults,normalize,simulate,fields,presets,priorities,offers,applyOffer,components,pvAlternatives};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document === 'undefined') return;
   const euro = n => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
@@ -333,6 +354,7 @@
   window.EnergySimulation=api;
   window.energyActiveConfig=()=>({...config});
   window.energyChooseOffer=(id,overrides)=>switchOffer(id,overrides);
+  window.energySetRegulation=patch=>{const allowed=['commissioningYear','regulationEnabled','transitionYears','transitionTariff','marketTariff','marketingCost','prosumerStartYear','prosumerAnnual','prosumerLocations'];config=normalize({...config,...Object.fromEntries(Object.entries(patch).filter(([key])=>allowed.includes(key))),scenario:'Manuell'});sync();update();};
   window.energySetDemand=(gas,wp)=>{config.gasDemand=gas;config.wpDemand=wp;config.scenario='Manuell';sync();update();};
   function switchOffer(id,overrides){
     if(config.offerId==='')customConfig={...config};
@@ -387,7 +409,7 @@
     $('timeButtons').addEventListener('click',event=> { const button=event.target.closest('[data-time]'); if(button) {config.timeIndex=Number(button.dataset.time); update();} });
     $('resetBtn').addEventListener('click',()=> {config=defaults(); customConfig=defaults(); status('Standardwerte wiederhergestellt.'); sync(); update(); });
     $('shareBtn').addEventListener('click',exportConfig);
-    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),customConfig,config},null,2)));
+    $('downloadBtn').addEventListener('click',()=>download(JSON.stringify({version:1,model:'PV-WP-Jahresmodell-2026',house:window.energyHouseExport?.(),decision:window.energyDecisionExport?.(),customConfig,config},null,2)));
   }
   if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();

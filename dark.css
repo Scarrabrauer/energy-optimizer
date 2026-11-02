@@ -14,3 +14,5 @@ body{background:var(--bg);color:#dce7f0;font-family:"Segoe UI",system-ui,sans-se
 
 /* Four-provider comparison */
 .decision-score-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.decision-table{min-width:1240px}.decision-table th:first-child{width:20%}@media(max-width:1150px){.decision-score-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.decision-score-grid{grid-template-columns:1fr}}
+
+#regCases .reg-selected{border-color:var(--mint);background:linear-gradient(135deg,#183d37,#121d29)}#regStatus{color:var(--mint)}#regulationActive{margin-bottom:0}#regAnnual table{min-width:1000px}
